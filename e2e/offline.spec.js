@@ -1,0 +1,18 @@
+import {test,expect} from '@playwright/test';
+import ExcelJS from 'exceljs';
+test('offline capture, photo export, restore and mobile language interface',async({page,context})=>{
+ const errors=[];page.on('pageerror',err=>errors.push(err.message));
+ await page.goto('/');await page.getByRole('button',{name:'Farms',exact:true}).click();await page.getByRole('button',{name:'Add farm',exact:true}).click();
+ await page.locator('[name=name]').fill('Pilot orchard');await page.locator('[name=state]').selectOption('Pahang');await page.locator('[name=district]').fill('Raub');await page.locator('[name=latitude]').fill('3.79');await page.locator('[name=longitude]').fill('101.86');await page.getByRole('button',{name:'Save',exact:true}).click();
+ await page.getByRole('button',{name:'Add a discovery',exact:true}).click();await page.locator('[name=note]').fill('Flowering progressing well.');await page.locator('[name=next]').fill('2027-01-01T09:00');
+ const photo=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=20;c.height=20;c.getContext('2d').fillRect(0,0,20,20);return c.toDataURL('image/jpeg').split(',')[1];});
+ await page.locator('#photos').setInputFiles({name:'test-photo.jpg',mimeType:'image/jpeg',buffer:Buffer.from(photo,'base64')});await expect(page.locator('#photoPreview img')).toHaveCount(1);await page.getByRole('button',{name:'Save',exact:true}).click();
+ await page.getByRole('button',{name:'Team overview',exact:true}).click();await page.locator('#periodFilter').selectOption('all');await expect(page.locator('.stat').first()).toContainText('1');await expect(page.locator('.marker')).toHaveCount(1);
+ await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration())?.active);await page.reload();await expect(page.locator('.stat').first()).toContainText('1');
+ await context.setOffline(true);await page.reload();await expect(page.getByText('Offline · keep recording',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Add a discovery',exact:true}).click();await page.locator('[name=note]').fill('Recorded with no signal.');await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.locator('.stat').first()).toContainText('2');
+ const exportEvent=page.waitForEvent('download');await page.locator('#excel').click();const excel=await exportEvent;const book=new ExcelJS.Workbook();await book.xlsx.readFile(await excel.path());expect(book.getWorksheet('Visits').rowCount).toBe(3);expect(book.getWorksheet('Visits').getImages().length).toBe(1);
+ await page.getByRole('button',{name:'Settings & backup',exact:true}).click();const backupEvent=page.waitForEvent('download');await page.locator('#backup').click();const backup=await backupEvent;const path=await backup.path();await page.locator('#backupFile').setInputFiles(path);await expect(page.locator('.toast')).toContainText('Existing records were kept');
+ await page.locator('#language').selectOption('ms');await expect(page.getByRole('heading',{name:'Tetapan & sandaran',exact:true})).toBeVisible();await page.locator('#language').selectOption('zh');await expect(page.getByRole('heading',{name:'设置与备份',exact:true})).toBeVisible();
+ await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'团队概览',exact:true}).click();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:'../preview-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});await page.locator('#language').selectOption('en');await page.screenshot({path:'../preview-desktop.png',fullPage:true});expect(errors).toEqual([]);
+});

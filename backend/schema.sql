@@ -10,7 +10,7 @@ alter table public.records enable row level security;
 create policy own_membership on public.memberships for select to authenticated using(user_id=auth.uid());
 create policy own_assignments on public.supervisor_staff for select to authenticated using(supervisor_id=auth.uid());
 create policy organisation_read on public.organisations for select to authenticated using(id in(select org_id from public.memberships where user_id=auth.uid()));
-create policy record_read on public.records for select to authenticated using(org_id in(select org_id from public.memberships where user_id=auth.uid()) and (owner_id=auth.uid() or exists(select 1 from public.memberships where user_id=auth.uid() and role='admin') or owner_id in(select staff_id from public.supervisor_staff where supervisor_id=auth.uid())));
+create policy record_read on public.records for select to authenticated using(org_id in(select org_id from public.memberships where user_id=auth.uid()) and (kind='farm' or owner_id=auth.uid() or exists(select 1 from public.memberships where user_id=auth.uid() and role='admin') or owner_id in(select staff_id from public.supervisor_staff where supervisor_id=auth.uid())));
 -- No direct insert/update/delete policies: writes must pass optimistic revision checks.
 create function public.save_record(record_id uuid,record_kind text,record_payload jsonb,expected_revision integer)
 returns integer language plpgsql security definer set search_path=public as $$
