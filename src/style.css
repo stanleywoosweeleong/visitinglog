@@ -6,3 +6,5 @@
 #discoveryFarm{margin:0;border:1px solid #d5dfd9;border-radius:10px;padding:1rem;min-width:0}#discoveryFarm[hidden]{display:none}#discoveryFarm legend{font-weight:700;padding:0 .4rem}
 
 #discoveryFarm details summary{cursor:pointer;padding:.6rem 0;font-weight:600}#visitForm > .actions{position:sticky;bottom:0;background:white;padding:.7rem 0;border-top:1px solid #e7ece8}.modalhead{position:sticky;top:0;background:white;z-index:2}
+
+#farmChoiceLabel{display:block}#visitForm input[hidden],#visitForm select[hidden],#chooseExistingFarm[hidden]{display:none}.textbutton{font-size:.8rem;padding:.25rem 0;border:0;background:transparent;text-decoration:underline}
