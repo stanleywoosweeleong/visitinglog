@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 const project='https://uqstiltepalfvydwynkr.supabase.co';
-const member={user_id:'11111111-1111-4111-8111-111111111111',org_id:'22222222-2222-4222-8222-222222222222',display_name:'Pilot staff',role:'staff'};
-async function mockAccount(context,rows,images){
+const staffMember={user_id:'11111111-1111-4111-8111-111111111111',org_id:'22222222-2222-4222-8222-222222222222',display_name:'Pilot staff',role:'staff'};
+async function mockAccount(context,rows,images,member=staffMember){
  await context.addInitScript(({member})=>{const user={id:member.user_id,email:'pilot@example.invalid',aud:'authenticated',role:'authenticated'};const expiry=Math.floor(Date.now()/1000)+3600;const token=btoa(JSON.stringify({alg:'HS256',typ:'JWT'}))+'.'+btoa(JSON.stringify({sub:user.id,exp:expiry,role:'authenticated'}))+'.test';localStorage.setItem('sb-uqstiltepalfvydwynkr-auth-token',JSON.stringify({access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:expiry,user}));},{member});
  await context.route(project+'/**',async route=>{const req=route.request(),url=new URL(req.url());const json=value=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
   if(url.pathname.includes('/memberships'))return json([member]);
@@ -24,4 +24,16 @@ test('team sync verifies private photos before cleanup and restores for viewing'
 test('upgrading a previous offline notebook preserves its records',async({page})=>{
  await page.addInitScript(()=>{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');const open=indexedDB.open('ladang-notebook',1);open.onupgradeneeded=()=>{const db=open.result;db.createObjectStore('records',{keyPath:'id'});db.createObjectStore('settings');};open.onsuccess=()=>{const db=open.result;const tx=db.transaction('records','readwrite');tx.objectStore('records').put({id:'old-farm',kind:'farm',name:'Existing offline orchard'});tx.oncomplete=()=>db.close();};}});
  await page.goto('/');await page.getByRole('button',{name:'Farms',exact:true}).click();await expect(page.getByRole('heading',{name:'Existing offline orchard',exact:true})).toBeVisible();
+});
+
+
+test('translation connection status persists and distinguishes verification failures',async({browser})=>{
+ const context=await browser.newContext({baseURL:'http://127.0.0.1:4173'});await mockAccount(context,new Map(),new Map(),{...staffMember,role:'admin'});
+ let verified=false,working=true;
+ await context.route(project+'/functions/v1/configure-translator',async route=>{const body=route.request().postDataJSON();if(body.test)verified=true;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({configured:true,working:body.test?working:undefined,verifiedAt:verified?'2026-10-08T10:40:00Z':null})});});
+ const page=await context.newPage();await page.goto('/');await page.getByRole('button',{name:'Settings & backup',exact:true}).click();await expect(page.locator('#translatorStatus')).toContainText('Translator key saved');
+ await page.locator('#testTranslator').click();await expect(page.locator('#translatorStatus')).toContainText('last test successful');
+ await page.getByRole('button',{name:'Farms',exact:true}).click();await page.getByRole('button',{name:'Settings & backup',exact:true}).click();await expect(page.locator('#translatorStatus')).toContainText('last test successful');
+ await page.reload();await page.getByRole('button',{name:'Settings & backup',exact:true}).click();await expect(page.locator('#translatorStatus')).toContainText('last test successful');
+ working=false;await page.locator('#testTranslator').click();await expect(page.locator('#translatorStatus')).toContainText('connection failed');await context.close();
 });
