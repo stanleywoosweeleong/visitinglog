@@ -5,3 +5,8 @@ test('new farm and discovery use one form and one save',async({page})=>{
  const rows=await page.evaluate(()=>new Promise(resolve=>{const request=indexedDB.open('ladang-notebook');request.onsuccess=()=>{const db=request.result;const read=db.transaction('scopedRecords').objectStore('scopedRecords').getAll();read.onsuccess=()=>{resolve(read.result);db.close();};};}));expect(rows.filter(r=>r.kind==='farm')).toHaveLength(1);expect(rows.filter(r=>r.kind==='visit')).toHaveLength(2);expect(rows.find(r=>r.kind==='farm').activity).toBe('Durian growing');expect(rows.find(r=>r.kind==='visit').farm_name).toBeUndefined();
 });
 
+
+test('a new farm saves without observations and validation errors are visible inside the dialog',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Add a discovery',exact:true}).click();await page.locator('[name=farm_name]').fill('Farm only');await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.locator('dialog')).not.toBeVisible();await expect(page.locator('.toast')).toContainText('Farm saved');await page.getByRole('button',{name:'Farms',exact:true}).click();await expect(page.getByRole('heading',{name:'Farm only',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Add a discovery',exact:true}).click();await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.locator('dialog .toast')).toContainText('Add a note or photo');await expect(page.locator('dialog')).toBeVisible();await expect(page.getByRole('button',{name:'Save',exact:true})).toBeEnabled();
+});
