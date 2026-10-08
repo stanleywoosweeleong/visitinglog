@@ -1,0 +1,18 @@
+create table public.server_settings(name text primary key,value jsonb not null);
+alter table public.server_settings enable row level security;
+revoke all on public.server_settings from public,anon,authenticated;
+grant select on public.server_settings to service_role;
+create table public.push_subscriptions(id uuid primary key default gen_random_uuid(),user_id uuid not null default auth.uid() references auth.users(id),endpoint text not null unique,keys jsonb not null,language text not null default 'en' check(language in('en','ms','zh')),created_at timestamptz not null default now());
+alter table public.push_subscriptions enable row level security;
+create policy own_push_read on public.push_subscriptions for select to authenticated using(user_id=(select auth.uid()));
+create policy own_push_insert on public.push_subscriptions for insert to authenticated with check(user_id=(select auth.uid()) and exists(select 1 from public.memberships where user_id=(select auth.uid())));
+create policy own_push_update on public.push_subscriptions for update to authenticated using(user_id=(select auth.uid())) with check(user_id=(select auth.uid()));
+create policy own_push_delete on public.push_subscriptions for delete to authenticated using(user_id=(select auth.uid()));
+grant select,insert,update,delete on public.push_subscriptions to authenticated;
+create index push_user_idx on public.push_subscriptions(user_id);
+create table public.reminder_deliveries(subscription_id uuid references public.push_subscriptions(id) on delete cascade,visit_id uuid references public.records(id),scheduled_for timestamptz not null,status text not null default 'sending',attempted_at timestamptz not null default now(),primary key(subscription_id,visit_id,scheduled_for));
+alter table public.reminder_deliveries enable row level security;
+revoke all on public.reminder_deliveries from public,anon,authenticated;
+grant all on public.reminder_deliveries to service_role;
+create extension if not exists pg_cron with schema pg_catalog;
+create extension if not exists pg_net with schema extensions;
