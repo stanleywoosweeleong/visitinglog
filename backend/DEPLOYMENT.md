@@ -12,3 +12,5 @@ Do not ask the user to write SQL. Use the connected Supabase integration once au
 8. Test sign-in, offline capture, reconnect, backup/restore, real photo download, and organisation isolation before recommending real records.
 
 The Supabase integration is connected. Project `uqstiltepalfvydwynkr` is active in Singapore. Schema, access provisioning, private storage and hardened functions are deployed. Sign-in uses the exact GitHub Pages redirect URL. The initial allowlisted administrator is `standphoto@gmail.com`.
+
+Shared record purge is available to organisation admins in Settings → Trash, after typing DELETE. `backend/purge.sql` guards the transaction, wipes the payload and retains a minimal sync tombstone. The `purge-record` Edge Function removes private photo files; protected cleanup jobs are retried by the existing 15-minute reminder scheduler. Farm purging requires linked visits to be purged first. Downloaded backups and exported files remain outside the app's control. Validation uses rolled-back database fixtures and mocked browser accounts; no real user record was deleted during implementation.

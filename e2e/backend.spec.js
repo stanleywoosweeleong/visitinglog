@@ -6,7 +6,7 @@ async function mockAccount(context,rows,images,member=staffMember){
  await context.route(project+'/**',async route=>{const req=route.request(),url=new URL(req.url());const json=value=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
   if(url.pathname.includes('/memberships'))return json([member]);
   if(url.pathname.includes('/rpc/save_record')){const r=req.postDataJSON(),old=rows.get(r.record_id),revision=(old?.revision||0)+1;rows.set(r.record_id,{id:r.record_id,kind:r.record_kind,owner_id:member.user_id,org_id:member.org_id,payload:r.record_payload,revision,updated_at:new Date().toISOString()});return json(revision);}
-  if(url.pathname.includes('/records')){const id=url.searchParams.get('id')?.replace('eq.','');return json(id?rows.get(id):[...rows.values()]);}
+  if(url.pathname.includes('/records')){if(url.searchParams.get('payload->>purged')==='eq.true')return json([...rows.values()].filter(r=>r.payload.purged));const id=url.searchParams.get('id')?.replace('eq.','');return json(id?rows.get(id):[...rows.values()]);}
   if(url.pathname.includes('/storage/v1/object/')){const path=decodeURIComponent(url.pathname.split('visit-photos/')[1]);if(req.method()==='POST'){images.set(path,req.postDataBuffer());return json({Key:'visit-photos/'+path});}return route.fulfill({status:images.has(path)?200:404,contentType:'image/jpeg',body:images.get(path)||Buffer.from('missing')});}
   if(url.pathname.includes('/functions/'))return route.fulfill({status:503,body:'Translation pending'});
   return json({});
@@ -36,4 +36,10 @@ test('translation connection status persists and distinguishes verification fail
  await page.getByRole('button',{name:'Farms',exact:true}).click();await page.getByRole('button',{name:'Settings & backup',exact:true}).click();await expect(page.locator('#translatorStatus')).toContainText('last test successful');
  await page.reload();await page.getByRole('button',{name:'Settings & backup',exact:true}).click();await expect(page.locator('#translatorStatus')).toContainText('last test successful');
  working=false;await page.locator('#testTranslator').click();await expect(page.locator('#translatorStatus')).toContainText('connection failed');await context.close();
+});
+
+test('administrator confirms shared purge and synced record is removed locally',async({browser})=>{
+ const context=await browser.newContext({baseURL:'http://127.0.0.1:4173'}),rows=new Map(),id='33333333-3333-4333-8333-333333333333';rows.set(id,{id,kind:'farm',org_id:staffMember.org_id,owner_id:staffMember.user_id,revision:2,updated_at:new Date().toISOString(),payload:{id,kind:'farm',name:'Disposable trash farm',deletedAt:new Date().toISOString()}});await mockAccount(context,rows,new Map(),{...staffMember,role:'admin'});
+ let called=false;await context.route(project+'/functions/v1/purge-record',async route=>{const body=route.request().postDataJSON();expect(body.id).toBe(id);expect(body.confirmation).toBe('DELETE');expect(body.revision).toBe(2);called=true;rows.set(id,{...rows.get(id),revision:3,payload:{id,kind:'farm',purged:true}});return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({purged:true,photosPending:false})});});
+ const page=await context.newPage();await page.goto('/');await page.getByRole('button',{name:'Settings & backup',exact:true}).click();await page.getByRole('button',{name:'Permanently delete',exact:true}).click();await expect(page.locator('#confirmPurge')).toBeDisabled();await page.locator('#confirmDelete').fill('DELETE');await page.locator('#confirmPurge').click();await expect(page.locator('.toast')).toContainText('permanently deleted');expect(called).toBe(true);await expect(page.getByText('Disposable trash farm',{exact:true})).not.toBeVisible();await context.close();
 });

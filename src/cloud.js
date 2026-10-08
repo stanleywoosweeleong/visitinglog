@@ -9,6 +9,7 @@ export let account=null;
 let syncing=false,connectionEpoch=0;
 export async function connect(){if(!cloud)return null;const epoch=++connectionEpoch;const {data:{session}}=await cloud.auth.getSession();if(epoch!==connectionEpoch)return membership;account=session?.user||null;setScope(account?.id);if(!session){membership=null;return null;}const cacheKey=`membership:${session.user.id}`;if(!navigator.onLine){const cached=await setting(cacheKey);if(epoch===connectionEpoch)membership=cached||null;return membership;}const {data,error}=await cloud.from('memberships').select('*').eq('user_id',session.user.id).maybeSingle();if(epoch!==connectionEpoch)return membership;if(error)throw error;membership=data;await setting(cacheKey,data);return data;}
 export async function sync(){if(!cloud||!membership||!navigator.onLine||syncing)return;syncing=true;const scopeSnapshot=getScope(),syncMember=membership;const stillCurrent=()=>getScope()===scopeSnapshot;try{
+ const {data:deleted,error:deletedError}=await cloud.from('records').select('id').eq('payload->>purged','true');if(deletedError)throw deletedError;if(!stillCurrent())return;for(const r of deleted||[])await remove(r.id);
  const local=(await records()).sort((a,b)=>(a.kind==='farm'?0:1)-(b.kind==='farm'?0:1));
  for(const record of local.filter(r=>r.dirty&&r.ownerId===syncMember.user_id)){
   const photos=await uploadPhotos(cloud,record,syncMember),candidate={...record,photos};if(!stillCurrent())return;

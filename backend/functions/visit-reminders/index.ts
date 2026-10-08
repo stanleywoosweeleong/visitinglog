@@ -1,3 +1,4 @@
+import {cleanupPhotos} from './cleanup.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.101.0';
 import webpush from 'npm:web-push@3.6.7';
 const allowedHosts=['fcm.googleapis.com','updates.push.services.mozilla.com','web.push.apple.com'];
@@ -8,6 +9,7 @@ Deno.serve(async req=>{
  if(configError||!settings)return new Response('Not configured',{status:503});
  const config=settings.value;
  if(req.headers.get('x-cron-secret')!==config.cronSecret)return new Response('Unauthorised',{status:401});
+ try{await cleanupPhotos(db);}catch{/* Retry on the next scheduled run. */}
  const {data:subscriptions,error:subError}=await db.from('push_subscriptions').select('*');
  if(subError)return new Response('Subscription lookup failed',{status:500});
  let delivered=0,failed=0;
