@@ -11,4 +11,4 @@ Do not ask the user to write SQL. Use the connected Supabase integration once au
 7. Deploy and test translation and reminder services only with configured provider credentials. Do not claim notifications or translations are active until end-to-end tests pass.
 8. Test sign-in, offline capture, reconnect, backup/restore, real photo download, and organisation isolation before recommending real records.
 
-Current deployment blocker: the Supabase integration has been suggested but has not been confirmed connected. The GitHub Pages app continues in personal/offline mode.
+The Supabase integration is connected. Project `uqstiltepalfvydwynkr` is active in Singapore. Schema, access provisioning, private storage and hardened functions are deployed. Sign-in uses the exact GitHub Pages redirect URL. The initial allowlisted administrator is `standphoto@gmail.com`.

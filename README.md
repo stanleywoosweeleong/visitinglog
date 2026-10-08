@@ -25,7 +25,17 @@ GitHub Pages serves only the public application code. Farmer records, phone numb
 
 Repository Settings → Pages → Source must be **GitHub Actions**. Each push to `main` builds and deploys the PWA. The site is served at https://stanleywoosweeleong.github.io/visitinglog/ .
 
-## Shared-team setup (not configured yet)
+## Connected backend
+
+The live application is connected to the dedicated Visitinglog Supabase project in Singapore. It uses a public publishable client key; access is restricted by server policies. The initial organisation is The Woo Brothers. `standphoto@gmail.com` is allowlisted as the initial administrator.
+
+Open **Settings & backup**, enter your email, and use the sign-in link sent to you. Administrators can give colleagues access by name and email. The colleague then signs in at the same app URL. No supervisor assignments or manual reporting are needed.
+
+Photos upload to private storage before visit sync. Phone photo cleanup verifies cloud metadata and downloads/checks each photo checksum before removing only local photo copies. Summaries, Excel exports and backups restore photos when needed; offline exports containing evicted photos require reconnecting first.
+
+Personal records remain separate until the user chooses **Share my personal notebook with the team**.
+
+## Setup for a separate deployment
 
 1. Create a Supabase project and run `backend/schema.sql` in its SQL editor.
 2. Create staff accounts using Supabase Auth. Provision an organisation and memberships through the administrator SQL editor; never allow staff to assign their own roles.
@@ -37,7 +47,7 @@ Repository Settings → Pages → Source must be **GitHub Actions**. Each push t
 
 - Free-text translation needs a deployed authenticated `translate-note` function returning `{translations:{en:{note,advice},ms:{note,advice},zh:{note,advice}}}`. Until then the UI says translation pending; it never invents translations.
 - Scheduled closed-app reminders need a push service and server scheduler. Selecting a reminder currently stores the preference only; notifications are not yet sent.
-- Photos are currently stored inline in records for the first version. Production should use private object storage with verified uploads and downloads before enabling phone photo cleanup. Cleanup is deliberately disabled.
+- Private photo storage and verified local cleanup are wired to the sync adapter. End-to-end live account testing remains necessary before a field rollout.
 - Shared permanent deletion must be implemented as an administrator operation with documented backup retention. Local-only Trash records can be permanently deleted with explicit confirmation.
 - Team authentication and offline account isolation require a security review before real organisational use. Use synthetic data for the initial preview.
 - Esri's online topographic map is used with attribution; tiles are not cached for offline use. Review service terms and intended usage before a wide rollout.
