@@ -29,7 +29,7 @@ Repository Settings → Pages → Source must be **GitHub Actions**. Each push t
 
 1. Create a Supabase project and run `backend/schema.sql` in its SQL editor.
 2. Create staff accounts using Supabase Auth. Provision an organisation and memberships through the administrator SQL editor; never allow staff to assign their own roles.
-3. Add supervisor/staff assignments to `supervisor_staff`.
+3. Every member can view all farms and visits within their organisation. No supervisor/staff assignments are required. Each author retains editing access to their own records.
 4. Add repository Actions variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then deploy again. These are public browser configuration protected by server access policies.
 5. Verify with separate staff and supervisor accounts that unauthorised organisations cannot read records.
 
